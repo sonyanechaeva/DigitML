@@ -141,7 +141,11 @@ void NeuralNetwork::compute_gradients_and_cost(
 inline std::vector<double> NeuralNetwork::feed_forward(
         const std::vector<double>& input,
         const Matrix<double>& weights) {
-    return sigmoid(weights * input);
+    #ifdef PERS
+        return bent_identity(weights * input);
+    #else
+        return sigmoid(weights * input);
+    #endif
 }
 
 Matrix<double> NeuralNetwork::weight_init(double maxWeight, unsigned int rows, unsigned int cols){
@@ -182,6 +186,13 @@ std::vector<double> NeuralNetwork::sigmoid(const std::vector<double>& x) {
     std::vector<double> result(x.size());
     for (unsigned int i = 0; i < x.size(); i++)
         result[i] = 1 / (1 + exp(-x[i]));
+    return result;
+}
+
+std::vector<double> NeuralNetwork::bent_identity(const std::vector<double>& x) {
+    std::vector<double> result(x.size());
+    for (unsigned int i = 0; i < x.size(); i++)
+        result[i] = (sqrt(pow(x[i], 2) + 1) - 1) / 2 + x[i];
     return result;
 }
 
