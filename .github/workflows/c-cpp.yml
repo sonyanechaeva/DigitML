@@ -1,4 +1,4 @@
-name: C/C++ CI
+name: C/C++ CI with GoogleTest
 
 on:
   push:
@@ -7,48 +7,52 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: Checkout code with submodules
       uses: actions/checkout@v3
-    
+      with:
+        submodules: recursive
+
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential
-        sudo apt-get install -y libgtest-dev
         sudo apt-get install -y cmake
-        sudo apt-get install -y gcovr
-    
+        sudo apt-get install -y g++
+
     - name: Build GoogleTest
       run: |
-        cd /usr/src/gtest
-        sudo cmake CMakeLists.txt
-        sudo make
-        sudo cp *.a /usr/lib
-    
-    - name: Compile tests
+        cd googletest
+        mkdir build
+        cd build
+        cmake ..
+        make -j4
+
+    - name: Compile and run tests
       run: |
-        make test
-    
-    - name: Run tests
-      run: |
+        # Компилируем основную программу
+        g++ -std=c++11 -I. -Isrc -o digitml src/main.cpp src/network.cpp lib/*.cpp
+        
+        # Компилируем тесты
+        g++ -std=c++11 -I. -Igoogletest/googletest/include -o test_program \
+            test_a.cpp src/network.cpp lib/*.cpp \
+            googletest/build/lib/libgtest.a googletest/build/lib/libgtest_main.a -pthread
+        
+        # Запускаем тесты
         ./test_program --gtest_output="xml:test_results.xml"
-    
-    - name: Generate coverage report
-      run: |
-        gcovr --xml -o coverage.xml .
-    
+
     - name: Upload test results
       uses: actions/upload-artifact@v3
       with:
         name: test-results
         path: test_results.xml
-    
-    - name: Upload coverage report
-      uses: actions/upload-artifact@v3
-      with:
-        name: coverage-report
-        path: coverage.xml
+
+    - name: Show test results
+      run: |
+        echo "=== РЕЗУЛЬТАТЫ ТЕСТОВ ==="
+        ./test_program --gtest_list_tests
+        echo "=== ЗАПУСК ТЕСТОВ ==="
+        ./test_program
