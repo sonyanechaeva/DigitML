@@ -2,28 +2,53 @@ name: C/C++ CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main", "fractional-activation" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: installation
-      run: sudo apt install -y googletest libgtest-dev build-essential gcovr
-    - name: compill unit tests
-      run: make test
-    - name: run unit tests
-      run: ./main
-    - name: make standart activate function
-      run: make 
-    - name: run standart activate function
-      run: ./main
-    - name: make bent_identity activate function
-      run: make bent_identity
-    - name: run bent_identity activate function
-      run: ./main
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential
+        sudo apt-get install -y libgtest-dev
+        sudo apt-get install -y cmake
+        sudo apt-get install -y gcovr
+    
+    - name: Build GoogleTest
+      run: |
+        cd /usr/src/gtest
+        sudo cmake CMakeLists.txt
+        sudo make
+        sudo cp *.a /usr/lib
+    
+    - name: Compile tests
+      run: |
+        make test
+    
+    - name: Run tests
+      run: |
+        ./test_program --gtest_output="xml:test_results.xml"
+    
+    - name: Generate coverage report
+      run: |
+        gcovr --xml -o coverage.xml .
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results
+        path: test_results.xml
+    
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: coverage.xml
